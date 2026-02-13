@@ -1,6 +1,5 @@
 #include "OpenAIBackend.h"
 
-#include <QBuffer>
 #include <QtConcurrent>
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
@@ -12,7 +11,8 @@ OpenAIBackend::OpenAIBackend(const QString &apiKey, QObject *parent)
 
 OpenAIBackend::~OpenAIBackend() {
     m_cancelled = true;
-    m_future.waitForFinished();
+    // WARNING: Do not add waitForFinished() — blocks GUI thread up to 30s.
+    // QPointer guards in the lambda handle safe destruction.
 }
 
 void OpenAIBackend::translate(const QByteArray &pngImageData,

@@ -11,7 +11,8 @@ GeminiBackend::GeminiBackend(const QString &apiKey, QObject *parent)
 
 GeminiBackend::~GeminiBackend() {
     m_cancelled = true;
-    m_future.waitForFinished();
+    // WARNING: Do not add waitForFinished() — blocks GUI thread up to 30s.
+    // QPointer guards in the lambda handle safe destruction.
 }
 
 void GeminiBackend::translate(const QByteArray &pngImageData,
