@@ -1,0 +1,86 @@
+#include "OpenAIBackend.h"
+
+#include <QBuffer>
+#include <QtConcurrent>
+#include <cpr/cpr.h>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+
+OpenAIBackend::OpenAIBackend(const QString &apiKey, QObject *parent)
+    : AIService(parent), m_apiKey(apiKey) {}
+
+void OpenAIBackend::translate(const QByteArray &pngImageData,
+                               const QString &targetLanguage) {
+    m_cancelled = false;
+
+    QString apiKey = m_apiKey;
+    QString lang = targetLanguage;
+    QByteArray imageData = pngImageData;
+
+    QtConcurrent::run([this, apiKey, lang, imageData]() {
+        try {
+            QString base64Image = QString::fromLatin1(imageData.toBase64());
+            QString dataUrl = "data:image/png;base64," + base64Image;
+
+            QString prompt = QString(
+                "OCR the text in this image and translate it to %1. "
+                "Return ONLY the translated text, nothing else. "
+                "If no text is found, respond with '[No text detected]'."
+            ).arg(lang);
+
+            json payload = {
+                {"model", "gpt-4o"},
+                {"messages", {{
+                    {"role", "user"},
+                    {"content", {
+                        {{"type", "text"}, {"text", prompt.toStdString()}},
+                        {{"type", "image_url"}, {"image_url", {{"url", dataUrl.toStdString()}}}}
+                    }}
+                }}},
+                {"max_tokens", 4096}
+            };
+
+            cpr::Response response = cpr::Post(
+                cpr::Url{"https://api.openai.com/v1/chat/completions"},
+                cpr::Header{
+                    {"Content-Type", "application/json"},
+                    {"Authorization", "Bearer " + apiKey.toStdString()}
+                },
+                cpr::Body{payload.dump()},
+                cpr::Timeout{30000}
+            );
+
+            if (m_cancelled) return;
+
+            if (response.status_code != 200) {
+                QString error = QString("API error (HTTP %1): %2")
+                    .arg(response.status_code)
+                    .arg(QString::fromStdString(response.text).left(200));
+                QMetaObject::invokeMethod(this, [this, error]() {
+                    emit translationFailed(error);
+                }, Qt::QueuedConnection);
+                return;
+            }
+
+            json result = json::parse(response.text);
+            std::string text = result["choices"][0]["message"]["content"];
+            QString translated = QString::fromStdString(text).trimmed();
+
+            QMetaObject::invokeMethod(this, [this, translated]() {
+                emit translationReady(translated);
+            }, Qt::QueuedConnection);
+
+        } catch (const std::exception &e) {
+            if (m_cancelled) return;
+            QString error = QString("Request failed: %1").arg(e.what());
+            QMetaObject::invokeMethod(this, [this, error]() {
+                emit translationFailed(error);
+            }, Qt::QueuedConnection);
+        }
+    });
+}
+
+void OpenAIBackend::cancel() {
+    m_cancelled = true;
+}
