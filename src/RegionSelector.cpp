@@ -16,17 +16,18 @@ RegionSelector::RegionSelector(QWidget *parent)
 }
 
 void RegionSelector::start() {
-    QRect fullGeometry;
-    for (QScreen *screen : QGuiApplication::screens()) {
-        fullGeometry = fullGeometry.united(screen->geometry());
-    }
-    setGeometry(fullGeometry);
+    // Use virtual desktop geometry to span ALL monitors
+    QScreen *primary = QGuiApplication::primaryScreen();
+    QRect virtualGeo = primary->virtualGeometry();
+    setGeometry(virtualGeo);
 
     m_selecting = false;
     m_startPos = QPoint();
     m_currentPos = QPoint();
 
-    showFullScreen();
+    // Don't use showFullScreen() — it only fullscreens one monitor
+    show();
+    raise();
     activateWindow();
     grabMouse();
     grabKeyboard();
@@ -38,7 +39,10 @@ void RegionSelector::paintEvent(QPaintEvent *) {
     painter.fillRect(rect(), QColor(0, 0, 0, 100));
 
     if (m_selecting) {
-        QRect selection = QRect(m_startPos, m_currentPos).normalized();
+        // Convert global coordinates to widget-local for painting
+        QPoint localStart = mapFromGlobal(m_startPos);
+        QPoint localCurrent = mapFromGlobal(m_currentPos);
+        QRect selection = QRect(localStart, localCurrent).normalized();
 
         painter.setCompositionMode(QPainter::CompositionMode_Clear);
         painter.fillRect(selection, Qt::transparent);
@@ -96,13 +100,29 @@ void RegionSelector::keyPressEvent(QKeyEvent *event) {
 }
 
 QPixmap RegionSelector::captureRegion(const QRect &region) {
-    QScreen *screen = QGuiApplication::screenAt(region.center());
-    if (!screen)
-        screen = QGuiApplication::primaryScreen();
+    // Composite capture from all screens that intersect the region
+    QPixmap composite(region.size());
+    composite.fill(Qt::black);
+    QPainter painter(&composite);
 
-    return screen->grabWindow(0,
-        region.x() - screen->geometry().x(),
-        region.y() - screen->geometry().y(),
-        region.width(),
-        region.height());
+    for (QScreen *screen : QGuiApplication::screens()) {
+        QRect screenGeo = screen->geometry();
+        QRect intersection = region.intersected(screenGeo);
+        if (intersection.isEmpty())
+            continue;
+
+        QPixmap screenGrab = screen->grabWindow(0,
+            intersection.x() - screenGeo.x(),
+            intersection.y() - screenGeo.y(),
+            intersection.width(),
+            intersection.height());
+
+        painter.drawPixmap(
+            intersection.x() - region.x(),
+            intersection.y() - region.y(),
+            screenGrab);
+    }
+
+    painter.end();
+    return composite;
 }
