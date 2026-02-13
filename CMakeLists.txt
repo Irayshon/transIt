@@ -14,6 +14,7 @@ add_executable(transIt WIN32
     src/main.cpp
     src/Settings.cpp
     src/HotkeyManager.cpp
+    src/RegionSelector.cpp
 )
 
 target_link_libraries(transIt PRIVATE
