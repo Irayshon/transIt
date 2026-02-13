@@ -52,8 +52,15 @@ void GeminiBackend::translate(const QByteArray &pngImageData,
                 }}
             };
 
+            // Normalize base URL: strip trailing slash and /v1beta to avoid duplication
+            QString normalizedUrl = baseUrl;
+            while (normalizedUrl.endsWith('/'))
+                normalizedUrl.chop(1);
+            if (normalizedUrl.endsWith("/v1beta"))
+                normalizedUrl.chop(7);
+
             QString url = QString("%1/v1beta/models/%2:generateContent?key=%3")
-                .arg(baseUrl, modelName, apiKey);
+                .arg(normalizedUrl, modelName, apiKey);
 
             cpr::Response response = cpr::Post(
                 cpr::Url{url.toStdString()},

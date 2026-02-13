@@ -50,7 +50,14 @@ void OpenAIBackend::translate(const QByteArray &pngImageData,
                 {"max_tokens", 4096}
             };
 
-            QString endpoint = baseUrl + "/v1/chat/completions";
+            // Normalize base URL: strip trailing slash and /v1 to avoid duplication
+            QString normalizedUrl = baseUrl;
+            while (normalizedUrl.endsWith('/'))
+                normalizedUrl.chop(1);
+            if (normalizedUrl.endsWith("/v1"))
+                normalizedUrl.chop(3);
+
+            QString endpoint = normalizedUrl + "/v1/chat/completions";
 
             cpr::Response response = cpr::Post(
                 cpr::Url{endpoint.toStdString()},
