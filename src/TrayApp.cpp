@@ -24,6 +24,8 @@ TrayApp::TrayApp(QObject *parent)
 }
 
 TrayApp::~TrayApp() {
+    if (m_trayIcon)
+        m_trayIcon->setContextMenu(nullptr);
     delete m_trayMenu;
     delete m_regionSelector;
     delete m_overlayWindow;
