@@ -16,6 +16,7 @@ add_executable(transIt WIN32
     src/HotkeyManager.cpp
     src/RegionSelector.cpp
     src/OpenAIBackend.cpp
+    src/GeminiBackend.cpp
 )
 
 target_link_libraries(transIt PRIVATE
