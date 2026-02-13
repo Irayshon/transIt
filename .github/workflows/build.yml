@@ -70,6 +70,7 @@ jobs:
           if (Test-Path $vcpkgBin) {
             Copy-Item "$vcpkgBin\*.dll" deploy\ -ErrorAction SilentlyContinue
           }
+          Copy-Item "uninstall.bat" deploy\
 
       # ── Upload artifact ──
       - name: Upload artifact
