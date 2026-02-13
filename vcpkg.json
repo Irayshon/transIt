@@ -3,10 +3,6 @@
   "version": "0.1.0",
   "description": "Screen region OCR + translation overlay for Windows 11",
   "dependencies": [
-    {
-      "name": "qtbase",
-      "version>=": "6.6.0"
-    },
     "nlohmann-json",
     "cpr"
   ]

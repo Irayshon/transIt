@@ -1,0 +1,80 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  QT_VERSION: '6.7.2'
+  BUILD_TYPE: Release
+  VCPKG_DEFAULT_TRIPLET: x64-windows
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Qt6 via install-qt-action (fast, cached) ──
+      - name: Install Qt6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: win64_msvc2019_64
+          cache: true
+
+      # ── MSVC toolchain ──
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      # ── Cache vcpkg installed packages ──
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_INSTALLATION_ROOT }}/installed
+          key: vcpkg-x64-windows-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-x64-windows-
+
+      # ── Install vcpkg dependencies (uses pre-installed vcpkg on windows-latest) ──
+      - name: Install vcpkg dependencies
+        run: vcpkg install --triplet x64-windows
+        shell: cmd
+
+      # ── Configure CMake ──
+      - name: Configure CMake
+        run: >
+          cmake -S . -B build
+          -G "Ninja"
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+          -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_INSTALLATION_ROOT }}/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows
+
+      # ── Build ──
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }}
+
+      # ── Package: collect exe + Qt DLLs + vcpkg DLLs ──
+      - name: Deploy
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path deploy
+          Copy-Item build\transIt.exe deploy\
+          & windeployqt deploy\transIt.exe --release --no-translations --no-opengl-sw
+          $vcpkgBin = "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\bin"
+          if (Test-Path $vcpkgBin) {
+            Copy-Item "$vcpkgBin\*.dll" deploy\ -ErrorAction SilentlyContinue
+          }
+
+      # ── Upload artifact ──
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransIt-Windows-x64
+          path: deploy/
