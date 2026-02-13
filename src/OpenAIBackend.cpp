@@ -34,8 +34,13 @@ void OpenAIBackend::translate(const QByteArray &pngImageData,
 
             QString prompt = QString(
                 "OCR the text in this image and translate it to %1. "
-                "Return ONLY the translated text, nothing else. "
-                "If no text is found, respond with '[No text detected]'."
+                "Return a JSON array of text blocks with their positions. "
+                "Each block should have the translated text and a bounding box "
+                "with normalized coordinates (0.0 to 1.0 relative to image dimensions). "
+                "Format: {\"blocks\":[{\"text\":\"translated text\","
+                "\"x\":0.1,\"y\":0.2,\"w\":0.3,\"h\":0.05}]} "
+                "x,y is top-left corner. Return ONLY valid JSON, no markdown fences. "
+                "If no text is found, return {\"blocks\":[]}."
             ).arg(lang);
 
             json payload = {
@@ -50,7 +55,6 @@ void OpenAIBackend::translate(const QByteArray &pngImageData,
                 {"max_tokens", 4096}
             };
 
-            // Normalize base URL: strip trailing slash and /v1 to avoid duplication
             QString normalizedUrl = baseUrl;
             while (normalizedUrl.endsWith('/'))
                 normalizedUrl.chop(1);
@@ -83,12 +87,30 @@ void OpenAIBackend::translate(const QByteArray &pngImageData,
             }
 
             json result = json::parse(response.text);
-            std::string text = result["choices"][0]["message"]["content"];
-            QString translated = QString::fromStdString(text).trimmed();
+            std::string content = result["choices"][0]["message"]["content"];
+            QString raw = QString::fromStdString(content).trimmed();
+
+            // Strip markdown code fences if present
+            if (raw.startsWith("```")) {
+                int firstNewline = raw.indexOf('\n');
+                int lastFence = raw.lastIndexOf("```");
+                if (firstNewline >= 0 && lastFence > firstNewline)
+                    raw = raw.mid(firstNewline + 1, lastFence - firstNewline - 1).trimmed();
+            }
+
+            json blocksJson = json::parse(raw.toStdString());
+            QVector<TextBlock> blocks;
+            for (auto &b : blocksJson["blocks"]) {
+                TextBlock tb;
+                tb.text = QString::fromStdString(b["text"].get<std::string>());
+                tb.bbox = QRectF(b["x"].get<double>(), b["y"].get<double>(),
+                                 b["w"].get<double>(), b["h"].get<double>());
+                blocks.append(tb);
+            }
 
             if (!self) return;
-            QMetaObject::invokeMethod(self.data(), [self, translated]() {
-                if (self) emit self->translationReady(translated);
+            QMetaObject::invokeMethod(self.data(), [self, blocks]() {
+                if (self) emit self->translationReady(blocks);
             }, Qt::QueuedConnection);
 
         } catch (const std::exception &e) {

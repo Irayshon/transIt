@@ -76,8 +76,8 @@ void TrayApp::onRegionSelected(const QRect &region, const QPixmap &screenshot) {
     m_aiService->translate(imageData, m_settings->targetLanguage());
 }
 
-void TrayApp::onTranslationReady(const QString &text) {
-    m_overlayWindow->showResult(text);
+void TrayApp::onTranslationReady(const QVector<TextBlock> &blocks) {
+    m_overlayWindow->showResult(blocks);
 }
 
 void TrayApp::onTranslationFailed(const QString &error) {

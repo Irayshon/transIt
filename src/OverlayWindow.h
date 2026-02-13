@@ -4,6 +4,9 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QRect>
+#include <QVector>
+
+#include "AIService.h"
 
 class OverlayWindow : public QWidget {
     Q_OBJECT
@@ -11,7 +14,7 @@ public:
     explicit OverlayWindow(QWidget *parent = nullptr);
 
     void showLoading(const QRect &selectionRect);
-    void showResult(const QString &text);
+    void showResult(const QVector<TextBlock> &blocks);
     void showError(const QString &error);
     void dismiss();
 
@@ -27,9 +30,7 @@ protected:
 
 private:
     void setupUi();
-    void adjustSizeToContent();
 
-    QLabel *m_textLabel = nullptr;
     QLabel *m_loadingLabel = nullptr;
     QPushButton *m_copyBtn = nullptr;
     QPushButton *m_saveBtn = nullptr;
@@ -37,8 +38,12 @@ private:
     QWidget *m_buttonBar = nullptr;
 
     QRect m_selectionRect;
-    QString m_currentText;
+    QVector<TextBlock> m_blocks;
+    QString m_plainText;
     int m_fontSize = 14;
+    bool m_showBlocks = false;
+    bool m_hasError = false;
+    QString m_errorText;
 
     static constexpr int PADDING = 12;
     static constexpr int BUTTON_BAR_HEIGHT = 36;

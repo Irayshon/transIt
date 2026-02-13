@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QSystemTrayIcon>
 #include <QMenu>
+#include <QVector>
 
 #include "Settings.h"
 #include "HotkeyManager.h"
@@ -21,7 +22,7 @@ public:
 private slots:
     void onHotkeyTriggered();
     void onRegionSelected(const QRect &region, const QPixmap &screenshot);
-    void onTranslationReady(const QString &text);
+    void onTranslationReady(const QVector<TextBlock> &blocks);
     void onTranslationFailed(const QString &error);
     void showSettingsDialog();
 

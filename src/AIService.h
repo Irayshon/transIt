@@ -2,7 +2,14 @@
 
 #include <QObject>
 #include <QByteArray>
+#include <QRectF>
 #include <QString>
+#include <QVector>
+
+struct TextBlock {
+    QString text;
+    QRectF bbox; // normalized 0.0-1.0 relative to image dimensions
+};
 
 class AIService : public QObject {
     Q_OBJECT
@@ -16,6 +23,6 @@ public:
     virtual void cancel() {}
 
 signals:
-    void translationReady(const QString &translatedText);
+    void translationReady(const QVector<TextBlock> &blocks);
     void translationFailed(const QString &errorMessage);
 };
