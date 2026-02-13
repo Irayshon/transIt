@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QSystemTrayIcon>
 #include <QMessageBox>
+#include "TrayApp.h"
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
@@ -14,10 +15,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Placeholder — TrayApp will be added in Task 8
-    QSystemTrayIcon trayIcon;
-    trayIcon.setToolTip("TransIt - Screen Translator");
-    trayIcon.show();
+    TrayApp trayApp;
+    trayApp.initialize();
 
     return app.exec();
 }

@@ -12,6 +12,7 @@ find_package(cpr CONFIG REQUIRED)
 
 add_executable(transIt WIN32
     src/main.cpp
+    src/TrayApp.cpp
     src/Settings.cpp
     src/HotkeyManager.cpp
     src/RegionSelector.cpp
