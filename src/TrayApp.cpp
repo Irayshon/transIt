@@ -122,12 +122,15 @@ void TrayApp::createAIService() {
     if (apiKey.isEmpty())
         return;
 
+    QString baseUrl = m_settings->baseUrl(backend);
+    QString modelName = m_settings->modelName(backend);
+
     switch (backend) {
         case Settings::Backend::OpenAI:
-            m_aiService = new OpenAIBackend(apiKey, this);
+            m_aiService = new OpenAIBackend(apiKey, baseUrl, modelName, this);
             break;
         case Settings::Backend::Gemini:
-            m_aiService = new GeminiBackend(apiKey, this);
+            m_aiService = new GeminiBackend(apiKey, baseUrl, modelName, this);
             break;
     }
 
@@ -155,16 +158,31 @@ void TrayApp::showSettingsDialog() {
 
     // Backend selection
     auto *backendCombo = new QComboBox();
-    backendCombo->addItem("OpenAI (GPT-4o)", static_cast<int>(Settings::Backend::OpenAI));
+    backendCombo->addItem("OpenAI-Compatible", static_cast<int>(Settings::Backend::OpenAI));
     backendCombo->addItem("Google Gemini", static_cast<int>(Settings::Backend::Gemini));
     backendCombo->setCurrentIndex(static_cast<int>(m_settings->activeBackend()));
     layout->addRow("AI Backend:", backendCombo);
 
-    // API Keys
+    auto *openaiUrlEdit = new QLineEdit(m_settings->baseUrl(Settings::Backend::OpenAI));
+    openaiUrlEdit->setPlaceholderText("https://api.openai.com");
+    layout->addRow("OpenAI Base URL:", openaiUrlEdit);
+
+    auto *openaiModelEdit = new QLineEdit(m_settings->modelName(Settings::Backend::OpenAI));
+    openaiModelEdit->setPlaceholderText("gpt-4o");
+    layout->addRow("OpenAI Model:", openaiModelEdit);
+
     auto *openaiKeyEdit = new QLineEdit(m_settings->apiKey(Settings::Backend::OpenAI));
     openaiKeyEdit->setEchoMode(QLineEdit::Password);
     openaiKeyEdit->setPlaceholderText("sk-...");
     layout->addRow("OpenAI API Key:", openaiKeyEdit);
+
+    auto *geminiUrlEdit = new QLineEdit(m_settings->baseUrl(Settings::Backend::Gemini));
+    geminiUrlEdit->setPlaceholderText("https://generativelanguage.googleapis.com");
+    layout->addRow("Gemini Base URL:", geminiUrlEdit);
+
+    auto *geminiModelEdit = new QLineEdit(m_settings->modelName(Settings::Backend::Gemini));
+    geminiModelEdit->setPlaceholderText("gemini-2.0-flash");
+    layout->addRow("Gemini Model:", geminiModelEdit);
 
     auto *geminiKeyEdit = new QLineEdit(m_settings->apiKey(Settings::Backend::Gemini));
     geminiKeyEdit->setEchoMode(QLineEdit::Password);
@@ -203,7 +221,11 @@ void TrayApp::showSettingsDialog() {
     if (dialog.exec() == QDialog::Accepted) {
         m_settings->setActiveBackend(
             static_cast<Settings::Backend>(backendCombo->currentData().toInt()));
+        m_settings->setBaseUrl(Settings::Backend::OpenAI, openaiUrlEdit->text());
+        m_settings->setModelName(Settings::Backend::OpenAI, openaiModelEdit->text());
         m_settings->setApiKey(Settings::Backend::OpenAI, openaiKeyEdit->text());
+        m_settings->setBaseUrl(Settings::Backend::Gemini, geminiUrlEdit->text());
+        m_settings->setModelName(Settings::Backend::Gemini, geminiModelEdit->text());
         m_settings->setApiKey(Settings::Backend::Gemini, geminiKeyEdit->text());
         m_settings->setTargetLanguage(langCombo->currentText());
         m_settings->setOverlayFontSize(fontSizeSpin->value());

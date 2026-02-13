@@ -6,8 +6,9 @@
 
 using json = nlohmann::json;
 
-GeminiBackend::GeminiBackend(const QString &apiKey, QObject *parent)
-    : AIService(parent), m_apiKey(apiKey) {}
+GeminiBackend::GeminiBackend(const QString &apiKey, const QString &baseUrl,
+                             const QString &modelName, QObject *parent)
+    : AIService(parent), m_apiKey(apiKey), m_baseUrl(baseUrl), m_modelName(modelName) {}
 
 GeminiBackend::~GeminiBackend() {
     m_cancelled = true;
@@ -20,11 +21,13 @@ void GeminiBackend::translate(const QByteArray &pngImageData,
     m_cancelled = false;
 
     QString apiKey = m_apiKey;
+    QString baseUrl = m_baseUrl;
+    QString modelName = m_modelName;
     QString lang = targetLanguage;
     QByteArray imageData = pngImageData;
     QPointer<GeminiBackend> self(this);
 
-    m_future = QtConcurrent::run([self, apiKey, lang, imageData]() {
+    m_future = QtConcurrent::run([self, apiKey, baseUrl, modelName, lang, imageData]() {
         try {
             QString base64Image = QString::fromLatin1(imageData.toBase64());
 
@@ -49,10 +52,8 @@ void GeminiBackend::translate(const QByteArray &pngImageData,
                 }}
             };
 
-            QString url = QString(
-                "https://generativelanguage.googleapis.com/v1beta/models/"
-                "gemini-2.0-flash:generateContent?key=%1"
-            ).arg(apiKey);
+            QString url = QString("%1/v1beta/models/%2:generateContent?key=%3")
+                .arg(baseUrl, modelName, apiKey);
 
             cpr::Response response = cpr::Post(
                 cpr::Url{url.toStdString()},

@@ -6,8 +6,9 @@
 
 using json = nlohmann::json;
 
-OpenAIBackend::OpenAIBackend(const QString &apiKey, QObject *parent)
-    : AIService(parent), m_apiKey(apiKey) {}
+OpenAIBackend::OpenAIBackend(const QString &apiKey, const QString &baseUrl,
+                             const QString &modelName, QObject *parent)
+    : AIService(parent), m_apiKey(apiKey), m_baseUrl(baseUrl), m_modelName(modelName) {}
 
 OpenAIBackend::~OpenAIBackend() {
     m_cancelled = true;
@@ -20,11 +21,13 @@ void OpenAIBackend::translate(const QByteArray &pngImageData,
     m_cancelled = false;
 
     QString apiKey = m_apiKey;
+    QString baseUrl = m_baseUrl;
+    QString modelName = m_modelName;
     QString lang = targetLanguage;
     QByteArray imageData = pngImageData;
     QPointer<OpenAIBackend> self(this);
 
-    m_future = QtConcurrent::run([self, apiKey, lang, imageData]() {
+    m_future = QtConcurrent::run([self, apiKey, baseUrl, modelName, lang, imageData]() {
         try {
             QString base64Image = QString::fromLatin1(imageData.toBase64());
             QString dataUrl = "data:image/png;base64," + base64Image;
@@ -36,7 +39,7 @@ void OpenAIBackend::translate(const QByteArray &pngImageData,
             ).arg(lang);
 
             json payload = {
-                {"model", "gpt-4o"},
+                {"model", modelName.toStdString()},
                 {"messages", {{
                     {"role", "user"},
                     {"content", {
@@ -47,8 +50,10 @@ void OpenAIBackend::translate(const QByteArray &pngImageData,
                 {"max_tokens", 4096}
             };
 
+            QString endpoint = baseUrl + "/v1/chat/completions";
+
             cpr::Response response = cpr::Post(
-                cpr::Url{"https://api.openai.com/v1/chat/completions"},
+                cpr::Url{endpoint.toStdString()},
                 cpr::Header{
                     {"Content-Type", "application/json"},
                     {"Authorization", "Bearer " + apiKey.toStdString()}

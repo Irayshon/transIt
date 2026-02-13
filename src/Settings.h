@@ -19,6 +19,14 @@ public:
     QString apiKey(Backend backend) const;
     void setApiKey(Backend backend, const QString &key);
 
+    // Base URL (OpenAI-compatible endpoints)
+    QString baseUrl(Backend backend) const;
+    void setBaseUrl(Backend backend, const QString &url);
+
+    // Model name
+    QString modelName(Backend backend) const;
+    void setModelName(Backend backend, const QString &model);
+
     // Target language
     QString targetLanguage() const;
     void setTargetLanguage(const QString &lang);

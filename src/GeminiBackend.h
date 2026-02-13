@@ -8,7 +8,8 @@
 class GeminiBackend : public AIService {
     Q_OBJECT
 public:
-    explicit GeminiBackend(const QString &apiKey, QObject *parent = nullptr);
+    explicit GeminiBackend(const QString &apiKey, const QString &baseUrl,
+                           const QString &modelName, QObject *parent = nullptr);
     ~GeminiBackend() override;
 
     QString name() const override { return "Gemini"; }
@@ -18,6 +19,8 @@ public:
 
 private:
     QString m_apiKey;
+    QString m_baseUrl;
+    QString m_modelName;
     std::atomic_bool m_cancelled{false};
     QFuture<void> m_future;
 };

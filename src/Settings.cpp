@@ -15,6 +15,38 @@ void Settings::setApiKey(Backend backend, const QString &key) {
     emit settingsChanged();
 }
 
+QString Settings::baseUrl(Backend backend) const {
+    QSettings s;
+    QString defaultUrl;
+    switch (backend) {
+        case Backend::OpenAI: defaultUrl = "https://api.openai.com"; break;
+        case Backend::Gemini: defaultUrl = "https://generativelanguage.googleapis.com"; break;
+    }
+    return s.value("base_urls/" + backendKey(backend), defaultUrl).toString();
+}
+
+void Settings::setBaseUrl(Backend backend, const QString &url) {
+    QSettings s;
+    s.setValue("base_urls/" + backendKey(backend), url);
+    emit settingsChanged();
+}
+
+QString Settings::modelName(Backend backend) const {
+    QSettings s;
+    QString defaultModel;
+    switch (backend) {
+        case Backend::OpenAI: defaultModel = "gpt-4o"; break;
+        case Backend::Gemini: defaultModel = "gemini-2.0-flash"; break;
+    }
+    return s.value("model_names/" + backendKey(backend), defaultModel).toString();
+}
+
+void Settings::setModelName(Backend backend, const QString &model) {
+    QSettings s;
+    s.setValue("model_names/" + backendKey(backend), model);
+    emit settingsChanged();
+}
+
 QString Settings::targetLanguage() const {
     QSettings s;
     return s.value("target_language", "English").toString();
