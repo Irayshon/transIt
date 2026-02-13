@@ -16,10 +16,13 @@ add_executable(transIt WIN32
     src/Settings.cpp
     src/HotkeyManager.cpp
     src/RegionSelector.cpp
+    src/OverlayWindow.cpp
     src/OpenAIBackend.cpp
     src/GeminiBackend.cpp
-    src/OverlayWindow.cpp
+    resources/transIt.qrc
 )
+
+target_include_directories(transIt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(transIt PRIVATE
     Qt6::Core
@@ -32,5 +35,9 @@ target_link_libraries(transIt PRIVATE
 )
 
 if(WIN32)
+    target_sources(transIt PRIVATE resources/transIt.rc)
     target_link_libraries(transIt PRIVATE user32 gdi32)
 endif()
+
+# Install
+install(TARGETS transIt RUNTIME DESTINATION bin)
