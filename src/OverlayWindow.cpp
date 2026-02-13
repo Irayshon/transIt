@@ -187,12 +187,21 @@ void OverlayWindow::paintEvent(QPaintEvent *) {
 
         QRect blockRect(bx, by, qMax(bw, 20), qMax(bh, 16));
 
+        // Auto-fit font: start from bounding box height, shrink to fit width
+        QFont font;
+        int fontSize = qMax(bh, 10);
+        font.setPixelSize(fontSize);
+        QFontMetrics fm(font);
+        while (fontSize > 8 && fm.horizontalAdvance(block.text) > blockRect.width()) {
+            fontSize--;
+            font.setPixelSize(fontSize);
+            fm = QFontMetrics(font);
+        }
+
         painter.setBrush(QColor(30, 30, 30, 180));
         painter.setPen(Qt::NoPen);
         painter.drawRoundedRect(blockRect.adjusted(-2, -1, 2, 1), 3, 3);
 
-        QFont font;
-        font.setPixelSize(qMax(bh - 4, 10));
         painter.setFont(font);
         painter.setPen(Qt::white);
         painter.drawText(blockRect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextWordWrap, block.text);
