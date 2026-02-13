@@ -11,6 +11,7 @@ env:
   QT_VERSION: '6.7.2'
   BUILD_TYPE: Release
   VCPKG_DEFAULT_TRIPLET: x64-windows
+  VCPKG_BASELINE: 'ac7af7424cbaf9057cb246b620f455303dccd6ed'
 
 jobs:
   build-windows:
@@ -19,10 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Export VCPKG_INSTALLATION_ROOT
+      - name: Setup vcpkg
         shell: pwsh
         run: |
-          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg-latest
+          git -C C:\vcpkg-latest checkout ${{ env.VCPKG_BASELINE }}
+          C:\vcpkg-latest\bootstrap-vcpkg.bat -disableMetrics
+          echo "VCPKG_ROOT=C:\vcpkg-latest" >> $env:GITHUB_ENV
 
       # ── Qt6 via install-qt-action (fast, cached) ──
       - name: Install Qt6
