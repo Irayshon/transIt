@@ -30,6 +30,8 @@ protected:
 
 private:
     void setupUi();
+    bool blocksOverflow() const;
+    void adjustSizeForFallback();
 
     QLabel *m_loadingLabel = nullptr;
     QPushButton *m_copyBtn = nullptr;
@@ -42,9 +44,11 @@ private:
     QString m_plainText;
     int m_fontSize = 14;
     bool m_showBlocks = false;
+    bool m_usePositionedLayout = false;
     bool m_hasError = false;
     QString m_errorText;
 
     static constexpr int PADDING = 12;
     static constexpr int BUTTON_BAR_HEIGHT = 36;
+    static constexpr int MAX_FONT_PX = 48;
 };

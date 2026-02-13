@@ -113,11 +113,18 @@ void OverlayWindow::showResult(const QVector<TextBlock> &blocks) {
         lines.append(b.text);
     m_plainText = lines.join('\n');
 
+    m_usePositionedLayout = !blocksOverflow();
+
     m_copyBtn->show();
     m_saveBtn->show();
     m_buttonBar->show();
-    m_buttonBar->setGeometry(PADDING, m_selectionRect.height() - BUTTON_BAR_HEIGHT - PADDING,
-                             m_selectionRect.width() - 2 * PADDING, BUTTON_BAR_HEIGHT);
+
+    if (m_usePositionedLayout) {
+        m_buttonBar->setGeometry(PADDING, m_selectionRect.height() - BUTTON_BAR_HEIGHT - PADDING,
+                                 m_selectionRect.width() - 2 * PADDING, BUTTON_BAR_HEIGHT);
+    } else {
+        adjustSizeForFallback();
+    }
 
     update();
 }
@@ -176,31 +183,91 @@ void OverlayWindow::paintEvent(QPaintEvent *) {
     if (!m_showBlocks || m_blocks.isEmpty())
         return;
 
-    int overlayW = width();
-    int overlayH = height();
+    if (m_usePositionedLayout) {
+        int overlayW = width();
+        int overlayH = height();
 
-    for (const auto &block : m_blocks) {
-        int bx = static_cast<int>(block.bbox.x() * overlayW);
-        int by = static_cast<int>(block.bbox.y() * overlayH);
-        int bw = static_cast<int>(block.bbox.width() * overlayW);
-        int bh = static_cast<int>(block.bbox.height() * overlayH);
+        for (const auto &block : m_blocks) {
+            int bx = static_cast<int>(block.bbox.x() * overlayW);
+            int by = static_cast<int>(block.bbox.y() * overlayH);
+            int bw = static_cast<int>(block.bbox.width() * overlayW);
+            int bh = static_cast<int>(block.bbox.height() * overlayH);
 
+            int fontSize = qMin(qMax(bh, 12), MAX_FONT_PX);
+            QFont font;
+            font.setPixelSize(fontSize);
+            QFontMetrics fm(font);
+            int textWidth = fm.horizontalAdvance(block.text);
+            int rectW = qMax(qMax(bw, textWidth + 8), 20);
+            int rectH = qMax(bh, fm.height());
+            QRect blockRect(bx, by, rectW, rectH);
+
+            painter.setBrush(QColor(30, 30, 30, 180));
+            painter.setPen(Qt::NoPen);
+            painter.drawRoundedRect(blockRect.adjusted(-2, -1, 2, 1), 3, 3);
+
+            painter.setFont(font);
+            painter.setPen(Qt::white);
+            painter.drawText(blockRect, Qt::AlignLeft | Qt::AlignVCenter, block.text);
+        }
+    } else {
         QFont font;
-        font.setPixelSize(qMax(bh, 12));
-        QFontMetrics fm(font);
-        int textWidth = fm.horizontalAdvance(block.text);
-        int rectW = qMax(qMax(bw, textWidth + 8), 20);
-        int rectH = qMax(bh, 16);
-        QRect blockRect(bx, by, rectW, rectH);
-
-        painter.setBrush(QColor(30, 30, 30, 180));
-        painter.setPen(Qt::NoPen);
-        painter.drawRoundedRect(blockRect.adjusted(-2, -1, 2, 1), 3, 3);
-
+        font.setPixelSize(m_fontSize);
         painter.setFont(font);
         painter.setPen(Qt::white);
-        painter.drawText(blockRect, Qt::AlignLeft | Qt::AlignVCenter, block.text);
+        QRect textArea = rect().adjusted(PADDING, PADDING, -PADDING, -BUTTON_BAR_HEIGHT - PADDING);
+        painter.drawText(textArea, Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, m_plainText);
     }
+}
+
+bool OverlayWindow::blocksOverflow() const {
+    int overlayW = m_selectionRect.width();
+    int overlayH = m_selectionRect.height();
+    int contentBottom = overlayH - BUTTON_BAR_HEIGHT - PADDING;
+
+    for (const auto &block : m_blocks) {
+        int by = static_cast<int>(block.bbox.y() * overlayH);
+        int bh = static_cast<int>(block.bbox.height() * overlayH);
+        int fontSize = qMin(qMax(bh, 12), MAX_FONT_PX);
+
+        QFont font;
+        font.setPixelSize(fontSize);
+        QFontMetrics fm(font);
+        int textWidth = fm.horizontalAdvance(block.text);
+        int bx = static_cast<int>(block.bbox.x() * overlayW);
+
+        if (by + fm.height() > contentBottom)
+            return true;
+        if (bx + textWidth > overlayW + overlayW / 4)
+            return true;
+        if (fontSize >= MAX_FONT_PX && bh > MAX_FONT_PX)
+            return true;
+    }
+    return false;
+}
+
+void OverlayWindow::adjustSizeForFallback() {
+    QFont font;
+    font.setPixelSize(m_fontSize);
+    QFontMetrics fm(font);
+    int availableWidth = m_selectionRect.width() - 2 * PADDING;
+    QRect textRect = fm.boundingRect(
+        QRect(0, 0, availableWidth, 99999),
+        Qt::TextWordWrap, m_plainText);
+
+    int neededHeight = textRect.height() + BUTTON_BAR_HEIGHT + 3 * PADDING;
+    int newHeight = qMax(m_selectionRect.height(), neededHeight);
+
+    QScreen *screen = QGuiApplication::screenAt(m_selectionRect.center());
+    if (!screen) screen = QGuiApplication::primaryScreen();
+    int maxHeight = screen->availableGeometry().bottom() - m_selectionRect.y();
+    newHeight = qMin(newHeight, maxHeight);
+
+    setGeometry(m_selectionRect.x(), m_selectionRect.y(),
+                m_selectionRect.width(), newHeight);
+
+    m_buttonBar->setGeometry(PADDING, newHeight - BUTTON_BAR_HEIGHT - PADDING,
+                             m_selectionRect.width() - 2 * PADDING, BUTTON_BAR_HEIGHT);
 }
 
 bool OverlayWindow::event(QEvent *event) {
