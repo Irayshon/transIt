@@ -2,6 +2,7 @@
   "name": "transit",
   "version": "0.1.0",
   "description": "Screen region OCR + translation overlay for Windows 11",
+  "builtin-baseline": "ac7af7424cbaf9057cb246b620f455303dccd6ed",
   "dependencies": [
     "nlohmann-json",
     "cpr"
