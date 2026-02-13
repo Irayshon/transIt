@@ -9,6 +9,11 @@ using json = nlohmann::json;
 GeminiBackend::GeminiBackend(const QString &apiKey, QObject *parent)
     : AIService(parent), m_apiKey(apiKey) {}
 
+GeminiBackend::~GeminiBackend() {
+    m_cancelled = true;
+    m_future.waitForFinished();
+}
+
 void GeminiBackend::translate(const QByteArray &pngImageData,
                                const QString &targetLanguage) {
     m_cancelled = false;
@@ -16,8 +21,9 @@ void GeminiBackend::translate(const QByteArray &pngImageData,
     QString apiKey = m_apiKey;
     QString lang = targetLanguage;
     QByteArray imageData = pngImageData;
+    QPointer<GeminiBackend> self(this);
 
-    QtConcurrent::run([this, apiKey, lang, imageData]() {
+    m_future = QtConcurrent::run([self, apiKey, lang, imageData]() {
         try {
             QString base64Image = QString::fromLatin1(imageData.toBase64());
 
@@ -31,8 +37,8 @@ void GeminiBackend::translate(const QByteArray &pngImageData,
                 {"contents", {{
                     {"parts", {
                         {{"text", prompt.toStdString()}},
-                        {{"inline_data", {
-                            {"mime_type", "image/png"},
+                        {{"inlineData", {
+                            {"mimeType", "image/png"},
                             {"data", base64Image.toStdString()}
                         }}}
                     }}
@@ -54,14 +60,15 @@ void GeminiBackend::translate(const QByteArray &pngImageData,
                 cpr::Timeout{30000}
             );
 
-            if (m_cancelled) return;
+            if (!self || self->m_cancelled) return;
 
             if (response.status_code != 200) {
                 QString error = QString("Gemini API error (HTTP %1): %2")
                     .arg(response.status_code)
                     .arg(QString::fromStdString(response.text).left(200));
-                QMetaObject::invokeMethod(this, [this, error]() {
-                    emit translationFailed(error);
+                if (!self) return;
+                QMetaObject::invokeMethod(self.data(), [self, error]() {
+                    if (self) emit self->translationFailed(error);
                 }, Qt::QueuedConnection);
                 return;
             }
@@ -70,15 +77,17 @@ void GeminiBackend::translate(const QByteArray &pngImageData,
             std::string text = result["candidates"][0]["content"]["parts"][0]["text"];
             QString translated = QString::fromStdString(text).trimmed();
 
-            QMetaObject::invokeMethod(this, [this, translated]() {
-                emit translationReady(translated);
+            if (!self) return;
+            QMetaObject::invokeMethod(self.data(), [self, translated]() {
+                if (self) emit self->translationReady(translated);
             }, Qt::QueuedConnection);
 
         } catch (const std::exception &e) {
-            if (m_cancelled) return;
+            if (!self || self->m_cancelled) return;
             QString error = QString("Request failed: %1").arg(e.what());
-            QMetaObject::invokeMethod(this, [this, error]() {
-                emit translationFailed(error);
+            if (!self) return;
+            QMetaObject::invokeMethod(self.data(), [self, error]() {
+                if (self) emit self->translationFailed(error);
             }, Qt::QueuedConnection);
         }
     });
