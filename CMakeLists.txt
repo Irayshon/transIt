@@ -17,6 +17,7 @@ add_executable(transIt WIN32
     src/RegionSelector.cpp
     src/OpenAIBackend.cpp
     src/GeminiBackend.cpp
+    src/OverlayWindow.cpp
 )
 
 target_link_libraries(transIt PRIVATE
