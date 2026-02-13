@@ -4,8 +4,6 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QRect>
-#include <QPropertyAnimation>
-#include <QTimer>
 
 class OverlayWindow : public QWidget {
     Q_OBJECT
@@ -21,8 +19,6 @@ public:
 
 signals:
     void dismissed();
-    void copyRequested();
-    void saveRequested();
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;

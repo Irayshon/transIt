@@ -119,8 +119,17 @@ void OverlayWindow::showLoading(const QRect &selectionRect) {
 void OverlayWindow::showResult(const QString &text) {
     m_currentText = text;
     m_loadingLabel->hide();
+
+    // Reset styling (may have been changed by showError)
+    m_textLabel->setStyleSheet(
+        QString("color: #ffffff; font-size: %1px; line-height: 1.4;")
+            .arg(m_fontSize));
     m_textLabel->setText(text);
     m_textLabel->show();
+
+    // Restore buttons (may have been hidden by showError)
+    m_copyBtn->show();
+    m_saveBtn->show();
     m_buttonBar->show();
 
     adjustSizeToContent();
