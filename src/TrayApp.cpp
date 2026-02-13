@@ -12,6 +12,7 @@
 #include <QDialogButtonBox>
 #include <QBuffer>
 #include <QMessageBox>
+#include <QIcon>
 
 TrayApp::TrayApp(QObject *parent)
     : QObject(parent)
@@ -23,6 +24,7 @@ TrayApp::TrayApp(QObject *parent)
 }
 
 TrayApp::~TrayApp() {
+    delete m_trayMenu;
     delete m_regionSelector;
     delete m_overlayWindow;
 }
@@ -37,6 +39,11 @@ void TrayApp::initialize() {
             this, &TrayApp::onHotkeyTriggered);
     connect(m_regionSelector, &RegionSelector::regionSelected,
             this, &TrayApp::onRegionSelected);
+
+    connect(m_overlayWindow, &OverlayWindow::dismissed,
+            this, [this]() {
+                if (m_aiService) m_aiService->cancel();
+            });
 
     m_overlayWindow->setFontSize(m_settings->overlayFontSize());
 }
@@ -79,9 +86,7 @@ void TrayApp::createTrayIcon() {
     m_trayIcon = new QSystemTrayIcon(this);
     m_trayIcon->setToolTip("TransIt - Screen Translator");
 
-    // Use a default icon (can be replaced with custom .ico later)
-    m_trayIcon->setIcon(QApplication::style()->standardIcon(
-        QStyle::SP_ComputerIcon));
+    m_trayIcon->setIcon(QIcon(":/icons/tray.png"));
 
     m_trayMenu = new QMenu();
 
