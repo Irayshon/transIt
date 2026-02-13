@@ -1,0 +1,8 @@
+build/
+build-win/
+.cache/
+CMakeUserPresets.json
+*.exe
+*.dll
+*.obj
+*.o
