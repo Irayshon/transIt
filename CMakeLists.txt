@@ -19,6 +19,7 @@ add_executable(transIt WIN32
     src/OverlayWindow.cpp
     src/OpenAIBackend.cpp
     src/GeminiBackend.cpp
+    src/AIService.cpp
     resources/transIt.qrc
 )
 
