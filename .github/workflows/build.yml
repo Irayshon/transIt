@@ -48,6 +48,15 @@ jobs:
         shell: cmd
 
       # ── Configure CMake ──
+      - name: Debug environment
+        shell: pwsh
+        run: |
+          Write-Host "Qt6_DIR=$env:Qt6_DIR"
+          Write-Host "QT_ROOT_DIR=$env:QT_ROOT_DIR"
+          Write-Host "VCPKG_INSTALLATION_ROOT=$env:VCPKG_INSTALLATION_ROOT"
+          ninja --version
+          cmake --version
+
       - name: Configure CMake
         run: >
           cmake -S . -B build
@@ -55,6 +64,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
           -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_INSTALLATION_ROOT }}/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-windows
+          -DCMAKE_PREFIX_PATH="${{ env.QT_ROOT_DIR }}/lib/cmake"
 
       # ── Build ──
       - name: Build
